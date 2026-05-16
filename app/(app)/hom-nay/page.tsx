@@ -29,27 +29,20 @@ export const metadata: Metadata = {
 function calculateStreak(
   todos: Array<{ date: string; completionRate: number }>,
 ): number {
-  const sorted = [...todos].sort((a, b) => b.date.localeCompare(a.date));
-  let streak = 0;
+  const map = new Map(todos.map((t) => [t.date, t.completionRate]));
   let cursor = today();
-  for (const t of sorted) {
-    if (t.date !== cursor) {
-      if (
-        t.date < cursor &&
-        streak === 0 &&
-        t.date === dayjs(cursor).subtract(1, "day").format("YYYY-MM-DD")
-      ) {
-        cursor = t.date;
-      } else {
-        break;
-      }
-    }
-    if (t.completionRate > 0) {
-      streak += 1;
-      cursor = dayjs(cursor).subtract(1, "day").format("YYYY-MM-DD");
-    } else {
-      break;
-    }
+  // Grace for today: if today's todo is missing or not yet started
+  // (completionRate === 0), start counting from yesterday so an unfinished
+  // morning doesn't reset a long streak.
+  if ((map.get(cursor) ?? 0) <= 0) {
+    cursor = dayjs(cursor).subtract(1, "day").format("YYYY-MM-DD");
+  }
+  let streak = 0;
+  while (true) {
+    const rate = map.get(cursor);
+    if (rate === undefined || rate <= 0) break;
+    streak += 1;
+    cursor = dayjs(cursor).subtract(1, "day").format("YYYY-MM-DD");
   }
   return streak;
 }
