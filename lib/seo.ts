@@ -22,7 +22,7 @@ export function buildMetadata(input: BuildMetadataInput): Metadata {
     : `${input.title} | ${SITE_NAME}`;
 
   return {
-    title: fullTitle,
+    title: { absolute: fullTitle },
     description,
     keywords: input.keywords,
     alternates: { canonical: url },
