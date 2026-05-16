@@ -116,9 +116,11 @@ export function ProgressStats({ summary }: { summary: MetricsSummary }) {
         unit={summary.avgSleepHours !== null ? "giờ" : undefined}
         icon={Moon}
         tone={
-          summary.avgSleepHours !== null && summary.avgSleepHours >= 7
-            ? "success"
-            : "warning"
+          summary.avgSleepHours === null
+            ? "default"
+            : summary.avgSleepHours >= 7
+              ? "success"
+              : "warning"
         }
       />
       <Stat
