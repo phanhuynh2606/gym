@@ -102,13 +102,12 @@ export function WeekCalendar({ plans }: Props) {
   );
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
     if (planSlug && plans.some((p) => p.slug === planSlug)) {
-      params.set("plan", planSlug);
+      router.replace(`${pathname}?plan=${encodeURIComponent(planSlug)}`, {
+        scroll: false,
+      });
     }
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [planSlug, pathname, plans, router, searchParams]);
+  }, [planSlug, pathname, plans, router]);
 
   const plan = useMemo(
     () => plans.find((p) => p.slug === planSlug) ?? plans[0],
