@@ -64,13 +64,16 @@ export async function getOrCreateMongoUser(): Promise<MongoUser | null> {
   const displayName =
     fullName || clerkUser.username || email?.split("@")[0] || "Bạn";
 
-  const created = await UserModel.create({
-    clerkId,
-    email,
-    displayName,
-  });
+  // Atomic upsert (race-safe): if a concurrent request already inserted this
+  // clerkId, `$setOnInsert` is skipped and we return the existing document
+  // instead of throwing an E11000 duplicate-key error.
+  const doc = await UserModel.findOneAndUpdate(
+    { clerkId },
+    { $setOnInsert: { clerkId, email, displayName } },
+    { upsert: true, new: true },
+  );
 
-  return serializeUser(created);
+  return serializeUser(doc);
 }
 
 /**
@@ -83,12 +86,15 @@ export async function upsertUserFromWebhook(payload: {
   displayName: string | null;
 }): Promise<MongoUser> {
   await connectMongoDB();
+  // Pass `null` through to `$set` (don't coerce to undefined) so that
+  // removing the email/name in Clerk clears the field in Mongo instead of
+  // leaving the stale value.
   const doc = await UserModel.findOneAndUpdate(
     { clerkId: payload.clerkId },
     {
       $set: {
-        email: payload.email ?? undefined,
-        displayName: payload.displayName ?? undefined,
+        email: payload.email,
+        displayName: payload.displayName,
       },
       $setOnInsert: { clerkId: payload.clerkId },
     },
