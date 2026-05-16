@@ -86,6 +86,36 @@ export type WorkoutPlan = {
   sessions: WorkoutSession[];
 };
 
+export type SetLog = {
+  setIndex: number;
+  reps?: number;
+  weight?: number;
+  completed: boolean;
+};
+
+export type ExerciseProgress = {
+  exerciseSlug: string;
+  sets: SetLog[];
+  updatedAt: string;
+};
+
+export type SessionProgress = {
+  planSlug: string;
+  sessionId: string;
+  date: string;
+  startedAt: string;
+  completedAt?: string;
+  exercises: Record<string, ExerciseProgress>;
+};
+
+export type SessionCompletion = {
+  planSlug: string;
+  sessionId: string;
+  dayIndex: number;
+  date: string;
+  completedAt: string;
+};
+
 export type DailyTodoTask = {
   id: string;
   title: string;

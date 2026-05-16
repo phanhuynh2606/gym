@@ -7,9 +7,11 @@ import { ExerciseFilters } from "./ExerciseFilters";
 import {
   DIFFICULTY_LABELS_VI,
   EQUIPMENT_LABELS_VI,
+  GOAL_LABELS_VI,
   MUSCLE_LABELS_VI,
   type Difficulty,
   type Equipment,
+  type Goal,
   type Muscle,
 } from "@/types";
 import { buildBreadcrumbJsonLd, buildMetadata } from "@/lib/seo";
@@ -31,6 +33,7 @@ type SearchParams = {
   muscle?: string;
   equipment?: string;
   difficulty?: string;
+  goal?: string;
 };
 
 export default async function ExercisesIndexPage({
@@ -42,6 +45,7 @@ export default async function ExercisesIndexPage({
   const muscle = params.muscle as Muscle | undefined;
   const equipment = params.equipment as Equipment | undefined;
   const difficulty = params.difficulty as Difficulty | undefined;
+  const goal = params.goal as Goal | undefined;
 
   const filtered = EXERCISES.filter((e) => {
     if (
@@ -53,6 +57,7 @@ export default async function ExercisesIndexPage({
     }
     if (equipment && !e.equipment.includes(equipment)) return false;
     if (difficulty && e.difficulty !== difficulty) return false;
+    if (goal && !e.goalTags.includes(goal)) return false;
     return true;
   });
 
@@ -68,6 +73,11 @@ export default async function ExercisesIndexPage({
     activeFilters.push({
       key: "difficulty",
       label: DIFFICULTY_LABELS_VI[difficulty],
+    });
+  if (goal)
+    activeFilters.push({
+      key: "goal",
+      label: GOAL_LABELS_VI[goal],
     });
 
   return (
