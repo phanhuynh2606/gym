@@ -390,7 +390,7 @@ function buildSuggestions(
 ): string[] {
   const out: string[] = [];
 
-  if (stats.completionRate > 85) {
+  if (stats.completionRate >= 85) {
     out.push(
       "Hoàn thành rất tốt — thử tăng nhẹ mức tạ (5%) hoặc thêm 1 set ở các bài compound.",
     );
