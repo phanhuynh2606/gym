@@ -15,6 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { FavoritePlanButton } from "@/components/favorites/FavoritePlanButton";
 import { WorkoutSession } from "@/components/workout/WorkoutSession";
 import { DIFFICULTY_LABELS_VI, type Exercise } from "@/types";
 import {
@@ -23,6 +24,7 @@ import {
   buildMetadata,
 } from "@/lib/seo";
 import { getBaseUrl } from "@/lib/constants";
+import { getOrCreateMongoUser } from "@/lib/users";
 import { EXERCISES } from "@/server/seed/exercises";
 import { getPlanBySlug, WORKOUT_PLANS } from "@/server/seed/workout-plans";
 
@@ -71,6 +73,9 @@ export default async function PlanDetailPage({ params }: Props) {
     }
   }
 
+  const user = await getOrCreateMongoUser();
+  const initialFavorited = user?.favoritePlanSlugs.includes(plan.slug) ?? false;
+
   return (
     <div className="container-app py-8 md:py-10 space-y-8">
       <Breadcrumb items={breadcrumbs} />
@@ -85,7 +90,16 @@ export default async function PlanDetailPage({ params }: Props) {
             {DIFFICULTY_LABELS_VI[plan.level]}
           </Badge>
         </div>
-        <h1>{plan.title}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h1>{plan.title}</h1>
+          {user && (
+            <FavoritePlanButton
+              slug={plan.slug}
+              initialFavorited={initialFavorited}
+              signedIn
+            />
+          )}
+        </div>
         <p className="text-text-secondary max-w-prose">{plan.description}</p>
         <p className="text-sm">
           <span className="font-semibold">Mục tiêu: </span>

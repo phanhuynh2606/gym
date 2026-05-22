@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ExerciseCard, MuscleBadge } from "@/components/exercise/ExerciseCard";
+import { FavoriteExerciseButton } from "@/components/favorites/FavoriteExerciseButton";
 import {
   DIFFICULTY_LABELS_VI,
   EQUIPMENT_LABELS_VI,
@@ -23,6 +24,7 @@ import {
   buildMetadata,
 } from "@/lib/seo";
 import { getBaseUrl } from "@/lib/constants";
+import { getOrCreateMongoUser } from "@/lib/users";
 import {
   EXERCISES,
   getExerciseBySlug,
@@ -67,6 +69,10 @@ export default async function ExerciseDetailPage({ params }: Props) {
     .map((s) => getExerciseBySlug(s))
     .filter(Boolean);
 
+  const user = await getOrCreateMongoUser();
+  const initialFavorited =
+    user?.favoriteExerciseSlugs.includes(exercise.slug) ?? false;
+
   return (
     <div className="container-app py-8 md:py-10 space-y-8">
       <Breadcrumb items={breadcrumbs} />
@@ -85,8 +91,19 @@ export default async function ExerciseDetailPage({ params }: Props) {
             {DIFFICULTY_LABELS_VI[exercise.difficulty]}
           </Badge>
         </div>
-        <h1>{exercise.nameVi}</h1>
-        <p className="text-text-secondary">{exercise.nameEn}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1>{exercise.nameVi}</h1>
+            <p className="text-text-secondary">{exercise.nameEn}</p>
+          </div>
+          {user && (
+            <FavoriteExerciseButton
+              slug={exercise.slug}
+              initialFavorited={initialFavorited}
+              signedIn
+            />
+          )}
+        </div>
         <p className="text-base text-text-secondary max-w-prose">
           {exercise.description}
         </p>
