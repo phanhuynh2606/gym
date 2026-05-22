@@ -14,8 +14,8 @@ import {
   type Goal,
   type Muscle,
 } from "@/types";
+import { listExercises } from "@/lib/exercises-data";
 import { buildBreadcrumbJsonLd, buildMetadata } from "@/lib/seo";
-import { EXERCISES } from "@/server/seed/exercises";
 
 export const metadata: Metadata = buildMetadata({
   title: "Thư viện bài tập gym",
@@ -47,7 +47,8 @@ export default async function ExercisesIndexPage({
   const difficulty = params.difficulty as Difficulty | undefined;
   const goal = params.goal as Goal | undefined;
 
-  const filtered = EXERCISES.filter((e) => {
+  const exercises = await listExercises();
+  const filtered = exercises.filter((e) => {
     if (
       muscle &&
       !e.primaryMuscles.includes(muscle) &&
@@ -87,7 +88,7 @@ export default async function ExercisesIndexPage({
       <header className="space-y-2">
         <h1>Thư viện bài tập</h1>
         <p className="text-text-secondary max-w-prose">
-          Hơn {EXERCISES.length} bài tập gym thông dụng với hướng dẫn, lỗi
+          Hơn {exercises.length} bài tập gym thông dụng với hướng dẫn, lỗi
           thường gặp và bài thay thế.
         </p>
       </header>

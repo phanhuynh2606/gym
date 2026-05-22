@@ -24,11 +24,12 @@ import {
   buildMetadata,
 } from "@/lib/seo";
 import { getBaseUrl } from "@/lib/constants";
-import { getOrCreateMongoUser } from "@/lib/users";
 import {
-  EXERCISES,
   getExerciseBySlug,
-} from "@/server/seed/exercises";
+  listExercises,
+} from "@/lib/exercises-data";
+import { getOrCreateMongoUser } from "@/lib/users";
+import { EXERCISES } from "@/server/seed/exercises";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -36,9 +37,11 @@ export function generateStaticParams() {
   return EXERCISES.map((e) => ({ slug: e.slug }));
 }
 
+export const dynamicParams = true;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const exercise = getExerciseBySlug(slug);
+  const exercise = await getExerciseBySlug(slug);
   if (!exercise) return {};
   return buildMetadata({
     title: `${exercise.nameVi} (${exercise.nameEn})`,
@@ -56,7 +59,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ExerciseDetailPage({ params }: Props) {
   const { slug } = await params;
-  const exercise = getExerciseBySlug(slug);
+  const [exercise, allExercises, user] = await Promise.all([
+    getExerciseBySlug(slug),
+    listExercises(),
+    getOrCreateMongoUser(),
+  ]);
   if (!exercise) notFound();
 
   const breadcrumbs = [
@@ -66,10 +73,8 @@ export default async function ExerciseDetailPage({ params }: Props) {
   ];
 
   const alternatives = (exercise.alternativeSlugs ?? [])
-    .map((s) => getExerciseBySlug(s))
+    .map((s) => allExercises.find((e) => e.slug === s))
     .filter(Boolean);
-
-  const user = await getOrCreateMongoUser();
   const initialFavorited =
     user?.favoriteExerciseSlugs.includes(exercise.slug) ?? false;
 
@@ -230,13 +235,14 @@ export default async function ExerciseDetailPage({ params }: Props) {
       <section>
         <h2 className="mb-4">Bài tập liên quan</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {EXERCISES.filter(
-            (e) =>
-              e.slug !== exercise.slug &&
-              e.primaryMuscles.some((m) =>
-                exercise.primaryMuscles.includes(m),
-              ),
-          )
+          {allExercises
+            .filter(
+              (e) =>
+                e.slug !== exercise.slug &&
+                e.primaryMuscles.some((m) =>
+                  exercise.primaryMuscles.includes(m),
+                ),
+            )
             .slice(0, 3)
             .map((ex) => (
               <ExerciseCard key={ex.id} exercise={ex} />

@@ -24,9 +24,10 @@ import {
   buildMetadata,
 } from "@/lib/seo";
 import { getBaseUrl } from "@/lib/constants";
+import { listExercises } from "@/lib/exercises-data";
 import { getOrCreateMongoUser } from "@/lib/users";
-import { EXERCISES } from "@/server/seed/exercises";
-import { getPlanBySlug, WORKOUT_PLANS } from "@/server/seed/workout-plans";
+import { getWorkoutPlanBySlug } from "@/lib/workout-plans-data";
+import { WORKOUT_PLANS } from "@/server/seed/workout-plans";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -34,9 +35,11 @@ export function generateStaticParams() {
   return WORKOUT_PLANS.map((p) => ({ slug: p.slug }));
 }
 
+export const dynamicParams = true;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const plan = getPlanBySlug(slug);
+  const plan = await getWorkoutPlanBySlug(slug);
   if (!plan) return {};
   return buildMetadata({
     title: plan.title,
@@ -49,7 +52,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PlanDetailPage({ params }: Props) {
   const { slug } = await params;
-  const plan = getPlanBySlug(slug);
+  const [plan, allExercises, user] = await Promise.all([
+    getWorkoutPlanBySlug(slug),
+    listExercises(),
+    getOrCreateMongoUser(),
+  ]);
   if (!plan) notFound();
 
   const breadcrumbs = [
@@ -67,13 +74,12 @@ export default async function PlanDetailPage({ params }: Props) {
     }
   }
   const exerciseMap: Record<string, Exercise> = {};
-  for (const ex of EXERCISES) {
+  for (const ex of allExercises) {
     if (referencedSlugs.has(ex.slug)) {
       exerciseMap[ex.slug] = ex;
     }
   }
 
-  const user = await getOrCreateMongoUser();
   const initialFavorited = user?.favoritePlanSlugs.includes(plan.slug) ?? false;
 
   return (
