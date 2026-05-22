@@ -30,10 +30,14 @@ export default async function CoachPage() {
   await connectMongoDB();
 
   const [historyDocs, context] = await Promise.all([
+    // Take the *most recent* 50 messages, then put them back in chronological
+    // order for display. Sorting ascending + limit(50) would silently truncate
+    // the conversation to its oldest turns once a user crosses 50 messages.
     CoachMessageModel.find({ userId: user.clerkId })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: -1 })
       .limit(50)
-      .lean(),
+      .lean()
+      .then((docs) => docs.reverse()),
     buildCoachContext(user),
   ]);
 
