@@ -506,7 +506,9 @@ export async function computeMonthlyReview(
           summaryText,
           achievements,
           suggestions,
-          suggestedNextPlanSlug: suggestedNextPlanSlug ?? undefined,
+          // Use null (not undefined) so a previously-set slug can be cleared
+          // when re-running — Mongoose strips undefined values from $set.
+          suggestedNextPlanSlug: suggestedNextPlanSlug ?? null,
         },
       },
       { upsert: true, new: true },
@@ -543,28 +545,18 @@ export async function getOrComputeReview(
   }).lean<MonthlyReviewDocument | null>();
 
   if (existing) {
+    // Always use freshly aggregated stats so derived fields like
+    // weightDeltaKg stay arithmetically consistent with bodyWeightStart /
+    // bodyWeightEnd. The persisted document only carries a subset of stat
+    // fields, so mixing stored and fresh values previously yielded
+    // impossible deltas (e.g. shown end weight 71 with hint "+3 kg"). Only
+    // the human-readable fields (summaryText / achievements / suggestions
+    // / suggestedNextPlanSlug) are sourced from the persisted snapshot.
     const stats = await aggregateMonthlyStats(clerkId, month);
     return {
       month,
       label: monthLabel(month),
-      stats: {
-        ...stats,
-        totalSessions: existing.stats?.totalSessions ?? stats.totalSessions,
-        plannedSessions:
-          existing.stats?.plannedSessions ?? stats.plannedSessions,
-        completionRate: existing.stats?.completionRate ?? stats.completionRate,
-        totalVolume: existing.stats?.totalVolume ?? stats.totalVolume,
-        avgSleepHours:
-          existing.stats?.avgSleepHours ?? stats.avgSleepHours ?? null,
-        avgWaterLiters:
-          existing.stats?.avgWaterLiters ?? stats.avgWaterLiters ?? null,
-        avgEnergyLevel:
-          existing.stats?.avgEnergyLevel ?? stats.avgEnergyLevel ?? null,
-        bodyWeightStart:
-          existing.stats?.bodyWeightStart ?? stats.bodyWeightStart ?? null,
-        bodyWeightEnd:
-          existing.stats?.bodyWeightEnd ?? stats.bodyWeightEnd ?? null,
-      },
+      stats,
       summaryText: existing.summaryText ?? buildSummaryText(stats),
       achievements: existing.achievements ?? [],
       suggestions: existing.suggestions ?? [],
