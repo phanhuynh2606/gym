@@ -22,6 +22,7 @@ export const APP_NAV = [
   { href: "/todo", label: "To-do", icon: "list-todo" },
   { href: "/lich-tap", label: "Lịch tập", icon: "calendar" },
   { href: "/tien-do", label: "Tiến độ", icon: "trending-up" },
+  { href: "/coach", label: "HLV AI", icon: "sparkles" },
   { href: "/tong-ket-thang", label: "Tổng kết tháng", icon: "bar-chart" },
   { href: "/yeu-thich", label: "Yêu thích", icon: "heart" },
 ];
