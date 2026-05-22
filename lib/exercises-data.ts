@@ -16,15 +16,17 @@ import type {
  * back to the bundled seed array. This lets the public pages keep working in
  * dev without a database while admins can override exercises by writing to
  * Mongo from /admin.
+ *
+ * Once Mongo has *any* exercise (published or not), the collection is
+ * authoritative for both list and detail reads. This is the only way to
+ * respect an admin unpublishing a row that also lives in the seed — see the
+ * Devin Review thread on the original PR #6.
  */
-async function findDbExercises(filter: Record<string, unknown> = {}) {
-  if (!isMongoConfigured()) return null;
+async function hasAnyDbExercises(): Promise<boolean> {
+  if (!isMongoConfigured()) return false;
   await connectMongoDB();
-  const docs = await ExerciseModel.find({ isPublished: true, ...filter })
-    .sort({ nameVi: 1 })
-    .lean<ExerciseDocument[]>();
-  if (docs.length === 0) return null;
-  return docs.map(serializeExerciseDoc);
+  const count = await ExerciseModel.estimatedDocumentCount();
+  return count > 0;
 }
 
 function serializeExerciseDoc(doc: ExerciseDocument): Exercise {
@@ -52,17 +54,26 @@ function serializeExerciseDoc(doc: ExerciseDocument): Exercise {
 
 /** All exercises visible to the public app (DB if available, seed otherwise). */
 export async function listExercises(): Promise<Exercise[]> {
-  const db = await findDbExercises();
-  return db ?? EXERCISES;
+  if (await hasAnyDbExercises()) {
+    const docs = await ExerciseModel.find({ isPublished: true })
+      .sort({ nameVi: 1 })
+      .lean<ExerciseDocument[]>();
+    return docs.map(serializeExerciseDoc);
+  }
+  return EXERCISES;
 }
 
-/** One exercise by slug. */
+/**
+ * One exercise by slug. When Mongo is authoritative we return `null` for
+ * unpublished rows or unknown slugs — we deliberately do NOT fall back to the
+ * seed in that case, because the seed could otherwise re-surface a row the
+ * admin just unpublished at its direct URL.
+ */
 export async function getExerciseBySlug(slug: string): Promise<Exercise | null> {
-  if (isMongoConfigured()) {
-    await connectMongoDB();
+  if (await hasAnyDbExercises()) {
     const doc = await ExerciseModel.findOne({ slug, isPublished: true })
       .lean<ExerciseDocument | null>();
-    if (doc) return serializeExerciseDoc(doc);
+    return doc ? serializeExerciseDoc(doc) : null;
   }
   return EXERCISES.find((e) => e.slug === slug) ?? null;
 }

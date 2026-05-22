@@ -54,26 +54,41 @@ function serializeSession(
   };
 }
 
+/**
+ * Once Mongo has any workout plan (published or not), the collection is
+ * authoritative for both list and detail reads. Otherwise we fall back to the
+ * bundled seed so dev environments work without a database.
+ */
+async function hasAnyDbPlans(): Promise<boolean> {
+  if (!isMongoConfigured()) return false;
+  await connectMongoDB();
+  const count = await WorkoutPlanModel.estimatedDocumentCount();
+  return count > 0;
+}
+
 /** Public listing — DB-backed when available + populated, seed otherwise. */
 export async function listWorkoutPlans(): Promise<WorkoutPlan[]> {
-  if (isMongoConfigured()) {
-    await connectMongoDB();
+  if (await hasAnyDbPlans()) {
     const docs = await WorkoutPlanModel.find({ isPublished: true })
       .sort({ targetUser: 1, daysPerWeek: 1 })
       .lean<WorkoutPlanDocument[]>();
-    if (docs.length > 0) return docs.map(serializePlanDoc);
+    return docs.map(serializePlanDoc);
   }
   return WORKOUT_PLANS;
 }
 
+/**
+ * One plan by slug. Mirrors `getExerciseBySlug`: once Mongo is authoritative
+ * we never fall back to the seed, otherwise an admin's unpublish would not
+ * affect the direct `/giao-an/{slug}` URL.
+ */
 export async function getWorkoutPlanBySlug(
   slug: string,
 ): Promise<WorkoutPlan | null> {
-  if (isMongoConfigured()) {
-    await connectMongoDB();
+  if (await hasAnyDbPlans()) {
     const doc = await WorkoutPlanModel.findOne({ slug, isPublished: true })
       .lean<WorkoutPlanDocument | null>();
-    if (doc) return serializePlanDoc(doc);
+    return doc ? serializePlanDoc(doc) : null;
   }
   return WORKOUT_PLANS.find((p) => p.slug === slug) ?? null;
 }
