@@ -89,6 +89,10 @@ export async function saveOnboarding(
 
   await connectMongoDB();
 
+  // Pass `null` directly (not `?? undefined`). Mongoose silently strips
+  // `undefined` from `$set`, which would mean blanking a field on redo would
+  // leave the previous value in the document. `$set: { heightCm: null }` does
+  // clear the field.
   await UserModel.updateOne(
     { clerkId: user.clerkId },
     {
@@ -97,10 +101,10 @@ export async function saveOnboarding(
         goal: input.goal,
         level: input.level,
         equipment: input.equipment,
-        heightCm: input.heightCm ?? undefined,
-        currentWeightKg: input.currentWeightKg ?? undefined,
-        targetWeightKg: input.targetWeightKg ?? undefined,
-        birthYear: input.birthYear ?? undefined,
+        heightCm: input.heightCm,
+        currentWeightKg: input.currentWeightKg,
+        targetWeightKg: input.targetWeightKg,
+        birthYear: input.birthYear,
         onboardingCompletedAt: new Date(),
       },
     },
@@ -124,13 +128,14 @@ export async function saveOnboarding(
 }
 
 /**
- * Enroll the user in the recommended plan. Thin wrapper around `enrollPlan`
- * that lets the wizard finalise onboarding with a single server call.
+ * Enroll the user in the recommended plan. Wraps `enrollPlan` with
+ * `preserveProfile: true` so the gender/goal the user just selected in the
+ * wizard are not overwritten by the plan's `targetUser` mapping.
  */
 export async function enrollRecommendedPlan(
   planSlug: string,
 ): Promise<{ ok: true; planSlug: string } | { ok: false; error: string }> {
-  const result = await enrollPlan(planSlug);
+  const result = await enrollPlan(planSlug, { preserveProfile: true });
   if (!result.ok) return result;
 
   revalidatePath("/onboarding");
