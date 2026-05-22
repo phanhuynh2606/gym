@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import dayjs from "dayjs";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Breadcrumb } from "@/components/seo/Breadcrumb";
 import { EnrollPlanCard } from "@/components/dashboard/EnrollPlanCard";
 import { SessionSummaryCard } from "@/components/dashboard/SessionSummaryCard";
@@ -67,6 +68,14 @@ export default async function HomNayPage() {
         </Card>
       </div>
     );
+  }
+
+  // First-time sign-in: send the user through the onboarding wizard before
+  // showing the dashboard. The wizard sets `onboardingCompletedAt` (either
+  // after finishing or via the "Bỏ qua" link) so this redirect only fires
+  // once per account.
+  if (!user.onboardingCompletedAt) {
+    redirect("/onboarding");
   }
 
   if (!user.activePlanSlug) {

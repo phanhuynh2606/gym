@@ -27,7 +27,19 @@ export type EnrollPlanResult =
   | { ok: true; planSlug: string; todosCreated: number }
   | { ok: false; error: string };
 
-export async function enrollPlan(planSlug: string): Promise<EnrollPlanResult> {
+export type EnrollPlanOptions = {
+  /**
+   * When `true`, do NOT derive `gender`/`goal` from `plan.targetUser`. Used by
+   * the onboarding wizard which already captured the user's real preferences
+   * and just wants to set the active plan + generate todos.
+   */
+  preserveProfile?: boolean;
+};
+
+export async function enrollPlan(
+  planSlug: string,
+  options: EnrollPlanOptions = {},
+): Promise<EnrollPlanResult> {
   if (!VALID_PLAN_SLUGS.has(planSlug)) {
     return { ok: false, error: "Giáo án không hợp lệ." };
   }
@@ -44,17 +56,16 @@ export async function enrollPlan(planSlug: string): Promise<EnrollPlanResult> {
 
   await connectMongoDB();
 
-  await UserModel.updateOne(
-    { clerkId: user.clerkId },
-    {
-      $set: {
-        activePlanSlug: plan.slug,
-        activePlanStartedAt: new Date(),
-        gender: TARGET_USER_TO_GENDER[plan.targetUser],
-        goal: TARGET_USER_TO_GOAL[plan.targetUser],
-      },
-    },
-  );
+  const baseSet: Record<string, unknown> = {
+    activePlanSlug: plan.slug,
+    activePlanStartedAt: new Date(),
+  };
+  if (!options.preserveProfile) {
+    baseSet.gender = TARGET_USER_TO_GENDER[plan.targetUser];
+    baseSet.goal = TARGET_USER_TO_GOAL[plan.targetUser];
+  }
+
+  await UserModel.updateOne({ clerkId: user.clerkId }, { $set: baseSet });
 
   const todos = buildDailyTodosForRange(today(), 30, plan).map((t) => ({
     ...t,
