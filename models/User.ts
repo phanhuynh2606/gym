@@ -15,6 +15,19 @@ const UserSchema = new Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     favoriteExerciseSlugs: [{ type: String, default: [] }],
     favoritePlanSlugs: [{ type: String, default: [] }],
+    // Onboarding (PR #7) — captured from the first-run wizard. Used by the AI
+    // coach (PR #8) for personalised plan suggestions and by /tien-do to
+    // render weight-goal progress.
+    level: {
+      type: String,
+      enum: ["beginner", "intermediate", "advanced"],
+    },
+    equipment: [{ type: String, default: [] }],
+    heightCm: { type: Number },
+    currentWeightKg: { type: Number },
+    targetWeightKg: { type: Number },
+    birthYear: { type: Number },
+    onboardingCompletedAt: { type: Date },
   },
   { timestamps: true },
 );

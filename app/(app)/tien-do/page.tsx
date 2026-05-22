@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { TrendingUp } from "lucide-react";
+import { Settings2, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { Breadcrumb } from "@/components/seo/Breadcrumb";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompletionChart } from "@/components/progress/CompletionChart";
 import { ProgressStats } from "@/components/progress/ProgressStats";
@@ -49,13 +51,21 @@ export default async function TienDoPage() {
     <div className="container-app py-8 md:py-10 space-y-6">
       <Breadcrumb items={breadcrumbs} />
 
-      <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Tiến độ
-        </h1>
-        <p className="text-sm text-text-secondary">
-          30 ngày gần nhất — cân nặng, completion rate và khối lượng tập.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Tiến độ
+          </h1>
+          <p className="text-sm text-text-secondary">
+            30 ngày gần nhất — cân nặng, completion rate và khối lượng tập.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/onboarding?redo=1">
+            <Settings2 className="h-3.5 w-3.5" />
+            Cập nhật mục tiêu & cân nặng
+          </Link>
+        </Button>
       </header>
 
       <ProgressStats summary={summary} />

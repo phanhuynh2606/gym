@@ -4,6 +4,11 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import { UserModel, type UserDocument } from "@/models/User";
 
+export type EquipmentAvailability =
+  | "full_gym"
+  | "home_dumbbell"
+  | "bodyweight";
+
 export type MongoUser = {
   clerkId: string;
   email: string | null;
@@ -15,7 +20,20 @@ export type MongoUser = {
   role: "user" | "admin";
   favoriteExerciseSlugs: string[];
   favoritePlanSlugs: string[];
+  level: "beginner" | "intermediate" | "advanced" | null;
+  equipment: EquipmentAvailability[];
+  heightCm: number | null;
+  currentWeightKg: number | null;
+  targetWeightKg: number | null;
+  birthYear: number | null;
+  onboardingCompletedAt: string | null;
 };
+
+const EQUIPMENT_VALUES: ReadonlySet<EquipmentAvailability> = new Set([
+  "full_gym",
+  "home_dumbbell",
+  "bodyweight",
+]);
 
 function serializeUser(doc: UserDocument): MongoUser {
   return {
@@ -31,6 +49,17 @@ function serializeUser(doc: UserDocument): MongoUser {
     role: doc.role ?? "user",
     favoriteExerciseSlugs: doc.favoriteExerciseSlugs ?? [],
     favoritePlanSlugs: doc.favoritePlanSlugs ?? [],
+    level: doc.level ?? null,
+    equipment: (doc.equipment ?? []).filter((e): e is EquipmentAvailability =>
+      EQUIPMENT_VALUES.has(e as EquipmentAvailability),
+    ),
+    heightCm: doc.heightCm ?? null,
+    currentWeightKg: doc.currentWeightKg ?? null,
+    targetWeightKg: doc.targetWeightKg ?? null,
+    birthYear: doc.birthYear ?? null,
+    onboardingCompletedAt: doc.onboardingCompletedAt
+      ? new Date(doc.onboardingCompletedAt).toISOString()
+      : null,
   };
 }
 
