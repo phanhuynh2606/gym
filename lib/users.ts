@@ -31,6 +31,9 @@ export type MongoUser = {
   reminderHour: number;
   reminderEmailEnabled: boolean;
   timezoneOffsetMinutes: number;
+  profileSlug: string | null;
+  profileVisibility: "public" | "private";
+  profileBio: string | null;
 };
 
 const EQUIPMENT_VALUES: ReadonlySet<EquipmentAvailability> = new Set([
@@ -74,6 +77,10 @@ function serializeUser(doc: UserDocument): MongoUser {
       typeof doc.timezoneOffsetMinutes === "number"
         ? doc.timezoneOffsetMinutes
         : 420,
+    profileSlug: typeof doc.profileSlug === "string" ? doc.profileSlug : null,
+    profileVisibility:
+      doc.profileVisibility === "public" ? "public" : "private",
+    profileBio: typeof doc.profileBio === "string" ? doc.profileBio : null,
   };
 }
 
