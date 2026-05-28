@@ -8,12 +8,21 @@ import { UserModel } from "@/models/User";
 
 export type MarkResult = { ok: true } | { ok: false; error: string };
 
+// 24-char hex (Mongo ObjectId). Guarding here means `markRead` can pass the
+// id straight to `updateOne({ _id })` without Mongoose throwing CastError
+// when a caller fabricates an arbitrary string via direct server-action call.
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+
 export async function markNotificationRead(
   notificationId: string,
 ): Promise<MarkResult> {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "Chưa đăng nhập." };
-  if (!notificationId || typeof notificationId !== "string") {
+  if (
+    !notificationId ||
+    typeof notificationId !== "string" ||
+    !OBJECT_ID_RE.test(notificationId)
+  ) {
     return { ok: false, error: "ID thông báo không hợp lệ." };
   }
   const result = await markRead(userId, notificationId);
