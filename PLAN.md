@@ -83,6 +83,29 @@
 - `/api/youtube/search` admin-only.
 - Role-based qua Clerk `publicMetadata.role`.
 
+### PR #7 — Onboarding wizard + personalised plan recommendation (~1 ngày)
+
+- `/onboarding` 4-step wizard (gender / goal / level + equipment / body stats).
+- Auto-redirect khi user mới đăng nhập (chưa có `onboardingCompletedAt`).
+- Personalised plan recommendation theo gender/goal/level/equipment.
+- `?redo=1` để user cập nhật lại sau.
+
+### PR #8 — AI workout coach (LLM + rule-based fallback) (~1.5 ngày)
+
+- `/coach` chat UI với context cá nhân (profile + 30-day progress + plan).
+- OpenAI-compatible wire format (`OPENAI_API_KEY`, `OPENAI_BASE_URL`).
+- Rule-based fallback khi không có key — 9 topic (motivation, plateau, nutrition, ...).
+- `CoachMessage` model lưu lịch sử, page load 50 message gần nhất.
+
+### PR #9 — Notification + Reminder (~1 ngày)
+
+- `Notification` model (in-app, dedupeKey để tránh spam).
+- `/thong-bao` list + mark-as-read / mark-all-read.
+- `/cai-dat` reminder preferences (giờ + email opt-in + auto-detect timezone).
+- Bell icon trong TopBar với unread badge (server-rendered count).
+- `/api/cron/send-reminders` chạy mỗi giờ (vercel.json), trigger theo timezone user.
+- Resend email (optional, graceful 503 khi không có `RESEND_API_KEY`).
+
 ---
 
 ## 3. Design System (Contentful) → Tailwind

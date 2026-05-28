@@ -27,6 +27,10 @@ export type MongoUser = {
   targetWeightKg: number | null;
   birthYear: number | null;
   onboardingCompletedAt: string | null;
+  reminderEnabled: boolean;
+  reminderHour: number;
+  reminderEmailEnabled: boolean;
+  timezoneOffsetMinutes: number;
 };
 
 const EQUIPMENT_VALUES: ReadonlySet<EquipmentAvailability> = new Set([
@@ -60,6 +64,16 @@ function serializeUser(doc: UserDocument): MongoUser {
     onboardingCompletedAt: doc.onboardingCompletedAt
       ? new Date(doc.onboardingCompletedAt).toISOString()
       : null,
+    reminderEnabled: doc.reminderEnabled ?? true,
+    reminderHour:
+      typeof doc.reminderHour === "number" && doc.reminderHour >= 0 && doc.reminderHour <= 23
+        ? doc.reminderHour
+        : 18,
+    reminderEmailEnabled: doc.reminderEmailEnabled ?? false,
+    timezoneOffsetMinutes:
+      typeof doc.timezoneOffsetMinutes === "number"
+        ? doc.timezoneOffsetMinutes
+        : 420,
   };
 }
 
