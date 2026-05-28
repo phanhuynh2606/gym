@@ -54,6 +54,11 @@ export type CreateNotificationInput = {
 /**
  * Persist a notification. Returns the upserted document. If `dedupeKey` is
  * supplied and a row already exists, the existing row is returned untouched.
+ *
+ * Atomic via `findOneAndUpdate` + `$setOnInsert` so two concurrent callers
+ * (e.g. the hourly cron and a manual `?force=1` retry) can never both
+ * insert and trip the unique index — one of them gets a no-op + `created:
+ * false` instead of throwing E11000.
  */
 export async function createNotification(
   input: CreateNotificationInput,
@@ -61,11 +66,30 @@ export async function createNotification(
   await connectMongoDB();
 
   if (input.dedupeKey) {
-    const existing = await NotificationModel.findOne({
-      userId: input.userId,
-      dedupeKey: input.dedupeKey,
-    });
-    if (existing) return { doc: existing, created: false };
+    const result = await NotificationModel.findOneAndUpdate(
+      { userId: input.userId, dedupeKey: input.dedupeKey },
+      {
+        $setOnInsert: {
+          userId: input.userId,
+          type: input.type,
+          title: input.title,
+          body: input.body,
+          href: input.href ?? undefined,
+          dedupeKey: input.dedupeKey,
+          read: false,
+        },
+      },
+      { upsert: true, new: true, includeResultMetadata: true },
+    );
+    if (!result.value) {
+      // includeResultMetadata + upsert + new:true always returns a doc; this
+      // branch is unreachable but keeps the types honest.
+      throw new Error("createNotification: upsert returned no document");
+    }
+    return {
+      doc: result.value as NotificationDocument,
+      created: Boolean(result.lastErrorObject?.upserted),
+    };
   }
 
   const doc = await NotificationModel.create({
@@ -74,7 +98,6 @@ export async function createNotification(
     title: input.title,
     body: input.body,
     href: input.href ?? undefined,
-    dedupeKey: input.dedupeKey,
     read: false,
   });
   return { doc, created: true };

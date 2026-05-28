@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import dayjs from "dayjs";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getBaseUrl } from "@/lib/constants";
 import { createNotification, markEmailSent } from "@/lib/notifications";
@@ -128,9 +127,15 @@ export async function GET(request: Request) {
 
       // Use the user's local "today" so that someone past midnight UTC but
       // still on yesterday's local day gets a reminder for the right todo.
-      const localToday = dayjs()
-        .add(tzOffset, "minute")
-        .format("YYYY-MM-DD");
+      //
+      // Compute from `Date.now()` (timezone-independent UTC ms) + the user's
+      // tz offset, then format via `toISOString()` which always treats the
+      // shifted value as UTC. This stays correct on a non-UTC server (e.g.
+      // a local dev box), unlike `dayjs().add(tzOffset, "minute")` which
+      // would double-count the server's own timezone offset.
+      const localToday = new Date(Date.now() + tzOffset * 60_000)
+        .toISOString()
+        .slice(0, 10);
 
       const todo = await DailyTodoModel.findOne({
         userId: user.clerkId,
