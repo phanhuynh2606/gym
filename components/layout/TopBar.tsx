@@ -12,6 +12,7 @@ import {
   Home,
   ListTodo,
   Menu,
+  Sparkles,
   TrendingUp,
   UserRound,
 } from "lucide-react";
@@ -39,6 +40,7 @@ const ICON_MAP: Record<string, typeof Home> = {
   "trending-up": TrendingUp,
   "bar-chart": BarChart,
   heart: Heart,
+  sparkles: Sparkles,
 };
 
 const DESKTOP_NAV = [
