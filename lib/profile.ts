@@ -109,16 +109,28 @@ function currentStreak(
 
 function longestRun(
   todos: Array<{ date: string; completionRate?: number }>,
+  from: string,
+  to: string,
 ): number {
+  // Iterate calendar day-by-day across [from, to] (inclusive). Missing
+  // days break the streak — without this, e.g. a user with todos for
+  // days 1-15 and 21-30 would falsely show a 25-day longest streak.
+  const byDate = new Map<string, number>();
+  for (const t of todos) byDate.set(t.date, t.completionRate ?? 0);
+
   let longest = 0;
   let cur = 0;
-  for (const t of todos) {
-    if ((t.completionRate ?? 0) > 0) {
+  let cursor = dayjs(from);
+  const end = dayjs(to);
+  while (!cursor.isAfter(end)) {
+    const rate = byDate.get(cursor.format("YYYY-MM-DD"));
+    if (rate != null && rate > 0) {
       cur += 1;
       longest = Math.max(longest, cur);
     } else {
       cur = 0;
     }
+    cursor = cursor.add(1, "day");
   }
   return longest;
 }
@@ -226,7 +238,7 @@ export async function buildProfileSnapshot(
       avgCompletion30: avgCompletion,
       totalVolume30: Math.round(totalVolume),
       currentStreak: currentStreak(todos),
-      longestStreak30: longestRun(todos),
+      longestStreak30: longestRun(todos, from, to),
     },
   };
 }

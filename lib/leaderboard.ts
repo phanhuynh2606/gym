@@ -54,16 +54,30 @@ function streakFromToday(
   return streak;
 }
 
-function longestRun(rates: number[]): number {
+function longestRun(
+  todos: Array<{ date: string; completionRate: number }>,
+  from: string,
+  to: string,
+): number {
+  // Iterate calendar day-by-day across [from, to] (inclusive). A gap in
+  // DailyTodo records breaks the streak — see lib/profile.ts for the
+  // same fix and rationale.
+  const byDate = new Map<string, number>();
+  for (const t of todos) byDate.set(t.date, t.completionRate);
+
   let longest = 0;
   let cur = 0;
-  for (const r of rates) {
-    if (r > 0) {
+  let cursor = dayjs(from);
+  const end = dayjs(to);
+  while (!cursor.isAfter(end)) {
+    const rate = byDate.get(cursor.format("YYYY-MM-DD"));
+    if (rate != null && rate > 0) {
       cur += 1;
       longest = Math.max(longest, cur);
     } else {
       cur = 0;
     }
+    cursor = cursor.add(1, "day");
   }
   return longest;
 }
@@ -165,9 +179,10 @@ export async function loadLeaderboard(
   for (const agg of perUser.values()) {
     const trainingDays = agg.todos.filter((t) => t.type === "training").length;
     if (trainingDays === 0) continue;
-    const rates = agg.todos
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((t) => t.completionRate);
+    const sortedTodos = [...agg.todos].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+    const rates = sortedTodos.map((t) => t.completionRate);
     const avgCompletion =
       rates.length === 0
         ? 0
@@ -181,7 +196,7 @@ export async function loadLeaderboard(
       totalVolume30: Math.round(agg.totalVolume),
       avgCompletion30: avgCompletion,
       currentStreak: streakFromToday(agg.todos),
-      longestStreak30: longestRun(rates),
+      longestStreak30: longestRun(sortedTodos, from, to),
     });
   }
 
