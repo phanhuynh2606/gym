@@ -7,6 +7,8 @@ const isProtectedRoute = createRouteMatcher([
   "/tien-do(.*)",
   "/tong-ket-thang(.*)",
   "/yeu-thich(.*)",
+  "/thong-bao(.*)",
+  "/cai-dat(.*)",
   "/admin(.*)",
 ]);
 

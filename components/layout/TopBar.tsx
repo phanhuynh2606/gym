@@ -49,7 +49,11 @@ const DESKTOP_NAV = [
   { href: "/lich-tap", label: "Lịch tập" },
 ] as const;
 
-export function TopBar() {
+type TopBarProps = {
+  notificationSlot?: React.ReactNode;
+};
+
+export function TopBar({ notificationSlot }: TopBarProps = {}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -229,6 +233,9 @@ export function TopBar() {
           </Show>
 
           <Show when="signed-in">
+            {notificationSlot ? (
+              <div className="flex items-center">{notificationSlot}</div>
+            ) : null}
             <UserButton
               appearance={{
                 elements: {

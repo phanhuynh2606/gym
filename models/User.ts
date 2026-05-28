@@ -28,6 +28,12 @@ const UserSchema = new Schema(
     targetWeightKg: { type: Number },
     birthYear: { type: Number },
     onboardingCompletedAt: { type: Date },
+    // Reminder preferences (PR #9). Defaults applied at read time in
+    // `lib/users.ts` so that missing documents still get sensible values.
+    reminderEnabled: { type: Boolean, default: true },
+    reminderHour: { type: Number, min: 0, max: 23, default: 18 },
+    reminderEmailEnabled: { type: Boolean, default: false },
+    timezoneOffsetMinutes: { type: Number, default: 420 },
   },
   { timestamps: true },
 );
