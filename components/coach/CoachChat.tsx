@@ -330,11 +330,36 @@ export function CoachChat({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              {(progress.weightDeltaKg30d ?? 0) <= 0 ? (
-                <TrendingDown className="h-4 w-4 text-state-success" aria-hidden />
-              ) : (
-                <TrendingUp className="h-4 w-4 text-state-warning" aria-hidden />
-              )}
+              {(() => {
+                const delta = progress.weightDeltaKg30d ?? 0;
+                // For weight_loss / toning goals, a decrease is good. For
+                // muscle_gain / strength goals, an increase is good. When goal
+                // is unset, default to "loss = good" (most common beginner
+                // use-case).
+                const lossIsGoal =
+                  !profile.goal ||
+                  profile.goal === "weight_loss" ||
+                  profile.goal === "toning";
+                const movingTowardGoal = lossIsGoal ? delta <= 0 : delta >= 0;
+                const Icon = lossIsGoal
+                  ? delta <= 0
+                    ? TrendingDown
+                    : TrendingUp
+                  : delta >= 0
+                    ? TrendingUp
+                    : TrendingDown;
+                return (
+                  <Icon
+                    className={cn(
+                      "h-4 w-4",
+                      movingTowardGoal
+                        ? "text-state-success"
+                        : "text-state-warning",
+                    )}
+                    aria-hidden
+                  />
+                );
+              })()}
               Tình hình 30 ngày
             </CardTitle>
           </CardHeader>

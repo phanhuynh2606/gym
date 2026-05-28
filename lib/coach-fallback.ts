@@ -74,7 +74,7 @@ const MUSCLE_KEYWORDS: Record<Muscle, RegExp> = {
   shoulders: /(vai|shoulder|press|deltoid)/i,
   biceps: /(tay trước|biceps|curl)/i,
   triceps: /(tay sau|triceps|tricep)/i,
-  abs: /(bụng|abs|core)/i,
+  abs: /(bụng|abs)/i,
   glutes: /(mông|glute|hip thrust)/i,
   quads: /(đùi trước|quad|squat)/i,
   hamstrings: /(đùi sau|hamstring|deadlift|rdl)/i,
