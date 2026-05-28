@@ -7,13 +7,15 @@ import { ExerciseFilters } from "./ExerciseFilters";
 import {
   DIFFICULTY_LABELS_VI,
   EQUIPMENT_LABELS_VI,
+  GOAL_LABELS_VI,
   MUSCLE_LABELS_VI,
   type Difficulty,
   type Equipment,
+  type Goal,
   type Muscle,
 } from "@/types";
+import { listExercises } from "@/lib/exercises-data";
 import { buildBreadcrumbJsonLd, buildMetadata } from "@/lib/seo";
-import { EXERCISES } from "@/server/seed/exercises";
 
 export const metadata: Metadata = buildMetadata({
   title: "Thư viện bài tập gym",
@@ -31,6 +33,7 @@ type SearchParams = {
   muscle?: string;
   equipment?: string;
   difficulty?: string;
+  goal?: string;
 };
 
 export default async function ExercisesIndexPage({
@@ -42,8 +45,10 @@ export default async function ExercisesIndexPage({
   const muscle = params.muscle as Muscle | undefined;
   const equipment = params.equipment as Equipment | undefined;
   const difficulty = params.difficulty as Difficulty | undefined;
+  const goal = params.goal as Goal | undefined;
 
-  const filtered = EXERCISES.filter((e) => {
+  const exercises = await listExercises();
+  const filtered = exercises.filter((e) => {
     if (
       muscle &&
       !e.primaryMuscles.includes(muscle) &&
@@ -53,6 +58,7 @@ export default async function ExercisesIndexPage({
     }
     if (equipment && !e.equipment.includes(equipment)) return false;
     if (difficulty && e.difficulty !== difficulty) return false;
+    if (goal && !e.goalTags.includes(goal)) return false;
     return true;
   });
 
@@ -69,6 +75,11 @@ export default async function ExercisesIndexPage({
       key: "difficulty",
       label: DIFFICULTY_LABELS_VI[difficulty],
     });
+  if (goal)
+    activeFilters.push({
+      key: "goal",
+      label: GOAL_LABELS_VI[goal],
+    });
 
   return (
     <div className="container-app py-8 md:py-10 space-y-6">
@@ -77,7 +88,7 @@ export default async function ExercisesIndexPage({
       <header className="space-y-2">
         <h1>Thư viện bài tập</h1>
         <p className="text-text-secondary max-w-prose">
-          Hơn {EXERCISES.length} bài tập gym thông dụng với hướng dẫn, lỗi
+          Hơn {exercises.length} bài tập gym thông dụng với hướng dẫn, lỗi
           thường gặp và bài thay thế.
         </p>
       </header>

@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import {
   DIFFICULTY_LABELS_VI,
   EQUIPMENT_LABELS_VI,
+  GOAL_LABELS_VI,
   MUSCLE_LABELS_VI,
   type Difficulty,
   type Equipment,
+  type Goal,
   type Muscle,
 } from "@/types";
 
@@ -35,6 +37,8 @@ const EQUIPMENT: Equipment[] = [
 ];
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"];
+
+const GOALS: Goal[] = ["weight_loss", "muscle_gain", "toning", "strength"];
 
 export function ExerciseFilters() {
   const router = useRouter();
@@ -88,6 +92,17 @@ export function ExerciseFilters() {
             label={DIFFICULTY_LABELS_VI[d]}
             active={searchParams.get("difficulty") === d}
             onClick={() => update("difficulty", d)}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup label="Mục tiêu">
+        {GOALS.map((g) => (
+          <Chip
+            key={g}
+            label={GOAL_LABELS_VI[g]}
+            active={searchParams.get("goal") === g}
+            onClick={() => update("goal", g)}
           />
         ))}
       </FilterGroup>

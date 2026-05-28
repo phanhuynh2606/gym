@@ -41,11 +41,13 @@ export function ExerciseCard({ exercise }: { exercise: Exercise }) {
   return (
     <Link
       href={`/bai-tap/${exercise.slug}`}
-      className="block focus-visible:ring-2 focus-visible:ring-brand rounded-md"
+      className="block rounded-md focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
     >
-      <Card className="h-full hover:shadow-overlay transition-shadow">
+      <Card className="group h-full border-border-subtle transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-overlay">
         <CardHeader className="pb-3">
-          <CardTitle className="line-clamp-2">{exercise.nameVi}</CardTitle>
+          <CardTitle className="line-clamp-2 group-hover:text-brand transition-colors">
+            {exercise.nameVi}
+          </CardTitle>
           <CardDescription className="line-clamp-1">
             {exercise.nameEn}
           </CardDescription>
@@ -61,7 +63,9 @@ export function ExerciseCard({ exercise }: { exercise: Exercise }) {
           </div>
           <div className="flex items-center justify-between text-xs text-text-secondary">
             <span>{DIFFICULTY_LABELS_VI[exercise.difficulty]}</span>
-            <span className="text-brand">Xem chi tiết →</span>
+            <span className="font-medium text-brand inline-flex items-center gap-1 transition-transform group-hover:translate-x-0.5">
+              Chi tiết →
+            </span>
           </div>
         </CardContent>
       </Card>

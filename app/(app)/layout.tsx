@@ -5,5 +5,5 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AppShell withSidebar>{children}</AppShell>;
+  return <AppShell>{children}</AppShell>;
 }

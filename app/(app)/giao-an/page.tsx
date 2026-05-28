@@ -5,7 +5,7 @@ import { Breadcrumb } from "@/components/seo/Breadcrumb";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { WorkoutPlanCard } from "@/components/workout/WorkoutPlanCard";
 import { buildBreadcrumbJsonLd, buildMetadata } from "@/lib/seo";
-import { WORKOUT_PLANS } from "@/server/seed/workout-plans";
+import { listWorkoutPlans } from "@/lib/workout-plans-data";
 
 export const metadata: Metadata = buildMetadata({
   title: "Giáo án gym 5 buổi/tuần",
@@ -19,7 +19,8 @@ const breadcrumbs = [
   { name: "Giáo án", href: "/giao-an" },
 ];
 
-export default function GiaoAnIndexPage() {
+export default async function GiaoAnIndexPage() {
+  const plans = await listWorkoutPlans();
   return (
     <div className="container-app py-8 md:py-10 space-y-6">
       <Breadcrumb items={breadcrumbs} />
@@ -33,7 +34,7 @@ export default function GiaoAnIndexPage() {
       </header>
 
       <div className="grid gap-5 md:grid-cols-2">
-        {WORKOUT_PLANS.map((plan) => (
+        {plans.map((plan) => (
           <WorkoutPlanCard key={plan.slug} plan={plan} />
         ))}
       </div>

@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ExerciseCard, MuscleBadge } from "@/components/exercise/ExerciseCard";
+import { FavoriteExerciseButton } from "@/components/favorites/FavoriteExerciseButton";
 import {
   DIFFICULTY_LABELS_VI,
   EQUIPMENT_LABELS_VI,
@@ -24,9 +25,11 @@ import {
 } from "@/lib/seo";
 import { getBaseUrl } from "@/lib/constants";
 import {
-  EXERCISES,
   getExerciseBySlug,
-} from "@/server/seed/exercises";
+  listExercises,
+} from "@/lib/exercises-data";
+import { getOrCreateMongoUser } from "@/lib/users";
+import { EXERCISES } from "@/server/seed/exercises";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -34,9 +37,11 @@ export function generateStaticParams() {
   return EXERCISES.map((e) => ({ slug: e.slug }));
 }
 
+export const dynamicParams = true;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const exercise = getExerciseBySlug(slug);
+  const exercise = await getExerciseBySlug(slug);
   if (!exercise) return {};
   return buildMetadata({
     title: `${exercise.nameVi} (${exercise.nameEn})`,
@@ -54,7 +59,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ExerciseDetailPage({ params }: Props) {
   const { slug } = await params;
-  const exercise = getExerciseBySlug(slug);
+  const [exercise, allExercises, user] = await Promise.all([
+    getExerciseBySlug(slug),
+    listExercises(),
+    getOrCreateMongoUser(),
+  ]);
   if (!exercise) notFound();
 
   const breadcrumbs = [
@@ -64,8 +73,10 @@ export default async function ExerciseDetailPage({ params }: Props) {
   ];
 
   const alternatives = (exercise.alternativeSlugs ?? [])
-    .map((s) => getExerciseBySlug(s))
+    .map((s) => allExercises.find((e) => e.slug === s))
     .filter(Boolean);
+  const initialFavorited =
+    user?.favoriteExerciseSlugs.includes(exercise.slug) ?? false;
 
   return (
     <div className="container-app py-8 md:py-10 space-y-8">
@@ -85,8 +96,19 @@ export default async function ExerciseDetailPage({ params }: Props) {
             {DIFFICULTY_LABELS_VI[exercise.difficulty]}
           </Badge>
         </div>
-        <h1>{exercise.nameVi}</h1>
-        <p className="text-text-secondary">{exercise.nameEn}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1>{exercise.nameVi}</h1>
+            <p className="text-text-secondary">{exercise.nameEn}</p>
+          </div>
+          {user && (
+            <FavoriteExerciseButton
+              slug={exercise.slug}
+              initialFavorited={initialFavorited}
+              signedIn
+            />
+          )}
+        </div>
         <p className="text-base text-text-secondary max-w-prose">
           {exercise.description}
         </p>
@@ -213,13 +235,14 @@ export default async function ExerciseDetailPage({ params }: Props) {
       <section>
         <h2 className="mb-4">Bài tập liên quan</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {EXERCISES.filter(
-            (e) =>
-              e.slug !== exercise.slug &&
-              e.primaryMuscles.some((m) =>
-                exercise.primaryMuscles.includes(m),
-              ),
-          )
+          {allExercises
+            .filter(
+              (e) =>
+                e.slug !== exercise.slug &&
+                e.primaryMuscles.some((m) =>
+                  exercise.primaryMuscles.includes(m),
+                ),
+            )
             .slice(0, 3)
             .map((ex) => (
               <ExerciseCard key={ex.id} exercise={ex} />
