@@ -66,10 +66,16 @@ const SORT_LABELS: Record<LeaderboardSort, string> = {
 };
 
 function parseSort(value: string | undefined): LeaderboardSort {
-  if (value === "volume" || value === "completion" || value === "points") {
+  if (
+    value === "streak" ||
+    value === "volume" ||
+    value === "completion" ||
+    value === "points"
+  ) {
     return value;
   }
-  return "streak";
+  // Points is the primary (first) tab, so it's the default landing sort.
+  return "points";
 }
 
 function formatVolume(volumeKg: number): string {
