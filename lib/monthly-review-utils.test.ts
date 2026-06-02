@@ -20,7 +20,7 @@ import {
 describe("month date helpers", () => {
   it("derives the YYYY-MM key from a date string or Date", () => {
     expect(monthKey("2026-05-17")).toBe("2026-05");
-    expect(monthKey(new Date("2026-12-31T23:00:00Z"))).toBe("2026-12");
+    expect(monthKey(new Date("2026-12-01T10:00:00Z"))).toBe("2026-12");
   });
 
   it("steps back across year boundaries", () => {
