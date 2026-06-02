@@ -9,6 +9,7 @@ import {
 import { computeLifetimeStats } from "@/lib/achievements-data";
 import { connectMongoDB } from "@/lib/mongodb";
 import { today } from "@/lib/daily-todo-template";
+import { currentStreak, longestRun } from "@/lib/streaks";
 import { DailyTodoModel } from "@/models/DailyTodo";
 import { ProgressLogModel } from "@/models/ProgressLog";
 import { UserModel } from "@/models/User";
@@ -102,59 +103,6 @@ export function normalizeSlug(input: string): string | null {
   return lower;
 }
 
-function currentStreak(
-  todos: Array<{ date: string; completionRate?: number }>,
-): number {
-  // Count back from today; stop at the first day with no completion.
-  let streak = 0;
-  const byDate = new Map<string, number>();
-  for (const t of todos) byDate.set(t.date, t.completionRate ?? 0);
-  for (let i = 0; i < 365; i += 1) {
-    const date = dayjs(today()).subtract(i, "day").format("YYYY-MM-DD");
-    const rate = byDate.get(date);
-    if (rate == null) {
-      // No record at all on day i → streak ends. Allow today to be the only
-      // "missing" day (user might not have ticked anything yet today).
-      if (i === 0) continue;
-      break;
-    }
-    if (rate <= 0) {
-      if (i === 0) continue; // grace period for today's not-yet-checked day
-      break;
-    }
-    streak += 1;
-  }
-  return streak;
-}
-
-function longestRun(
-  todos: Array<{ date: string; completionRate?: number }>,
-  from: string,
-  to: string,
-): number {
-  // Iterate calendar day-by-day across [from, to] (inclusive). Missing
-  // days break the streak — without this, e.g. a user with todos for
-  // days 1-15 and 21-30 would falsely show a 25-day longest streak.
-  const byDate = new Map<string, number>();
-  for (const t of todos) byDate.set(t.date, t.completionRate ?? 0);
-
-  let longest = 0;
-  let cur = 0;
-  let cursor = dayjs(from);
-  const end = dayjs(to);
-  while (!cursor.isAfter(end)) {
-    const rate = byDate.get(cursor.format("YYYY-MM-DD"));
-    if (rate != null && rate > 0) {
-      cur += 1;
-      longest = Math.max(longest, cur);
-    } else {
-      cur = 0;
-    }
-    cursor = cursor.add(1, "day");
-  }
-  return longest;
-}
-
 /**
  * Build a redacted public snapshot for `/u/<slug>`. Caller is responsible
  * for verifying `profileVisibility === "public"` first; this helper does
@@ -226,6 +174,12 @@ export async function buildProfileSnapshot(
         );
   const totalVolume = logs.reduce((a, l) => a + (l.totalVolume ?? 0), 0);
 
+  // Shared streak helpers expect a concrete completion rate per day.
+  const dayRates = todos.map((t) => ({
+    date: t.date,
+    completionRate: t.completionRate ?? 0,
+  }));
+
   const activePlan =
     user.activePlanSlug != null
       ? WORKOUT_PLANS.find((p) => p.slug === user.activePlanSlug) ?? null
@@ -273,8 +227,8 @@ export async function buildProfileSnapshot(
       completedDays30: completedDays,
       avgCompletion30: avgCompletion,
       totalVolume30: Math.round(totalVolume),
-      currentStreak: currentStreak(todos),
-      longestStreak30: longestRun(todos, from, to),
+      currentStreak: currentStreak(dayRates, to),
+      longestStreak30: longestRun(dayRates, from, to),
     },
     gamification: {
       level: summary.level,
