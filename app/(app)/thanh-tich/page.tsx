@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Trophy } from "lucide-react";
 import { AchievementCard } from "@/components/achievements/AchievementCard";
 import { AchievementsHeader } from "@/components/achievements/AchievementsHeader";
+import { WeeklyChallengeCard } from "@/components/achievements/WeeklyChallengeCard";
 import { Breadcrumb } from "@/components/seo/Breadcrumb";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -10,6 +11,7 @@ import {
   type AchievementStatus,
 } from "@/lib/achievements";
 import { syncAndEvaluateAchievements } from "@/lib/achievements-data";
+import { computeWeeklyChallenge } from "@/lib/challenges";
 import { isMongoConfigured } from "@/lib/mongodb";
 import { getOrCreateMongoUser } from "@/lib/users";
 
@@ -67,7 +69,10 @@ export default async function ThanhTichPage() {
     );
   }
 
-  const { statuses, summary } = await syncAndEvaluateAchievements(user.clerkId);
+  const [{ statuses, summary }, weeklyChallenge] = await Promise.all([
+    syncAndEvaluateAchievements(user.clerkId),
+    computeWeeklyChallenge(user.clerkId),
+  ]);
 
   const byCategory = new Map<AchievementCategory, AchievementStatus[]>();
   for (const s of statuses) {
@@ -91,6 +96,8 @@ export default async function ThanhTichPage() {
       </header>
 
       <AchievementsHeader summary={summary} />
+
+      <WeeklyChallengeCard challenge={weeklyChallenge} />
 
       {CATEGORY_ORDER.map((category) => {
         const items = byCategory.get(category);

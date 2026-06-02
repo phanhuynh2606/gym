@@ -13,6 +13,7 @@ export type NotificationType =
   | "streak_milestone"
   | "monthly_review_ready"
   | "achievement_unlocked"
+  | "challenge_completed"
   | "system";
 
 export type NotificationView = {

@@ -10,6 +10,7 @@ import {
   ListTodo,
   ScrollText,
   Sparkles,
+  Target,
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,6 +30,7 @@ const ICON_MAP: Record<NotificationView["type"], typeof Bell> = {
   streak_milestone: Trophy,
   monthly_review_ready: Sparkles,
   achievement_unlocked: Award,
+  challenge_completed: Target,
   system: Bell,
 };
 

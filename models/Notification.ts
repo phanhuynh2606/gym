@@ -12,6 +12,7 @@ const NotificationSchema = new Schema(
         "streak_milestone",
         "monthly_review_ready",
         "achievement_unlocked",
+        "challenge_completed",
         "system",
       ],
       required: true,
