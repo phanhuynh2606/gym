@@ -8,6 +8,7 @@ import {
 } from "@/lib/achievements";
 import { connectMongoDB } from "@/lib/mongodb";
 import { today } from "@/lib/daily-todo-template";
+import { currentStreak, longestRun } from "@/lib/streaks";
 import { DailyTodoModel } from "@/models/DailyTodo";
 import { ProgressLogModel } from "@/models/ProgressLog";
 import { UserModel } from "@/models/User";
@@ -43,58 +44,6 @@ type AggregatedPerUser = {
   /** Lifetime ProgressLog volumes by date. */
   logs: Array<{ date: string; volume: number }>;
 };
-
-function streakFromToday(
-  todos: Array<{ date: string; completionRate: number }>,
-): number {
-  // Same convention as `lib/profile.ts`: today gets a grace period, then
-  // every consecutive past day with completion > 0 counts.
-  let streak = 0;
-  const byDate = new Map<string, number>();
-  for (const t of todos) byDate.set(t.date, t.completionRate);
-  for (let i = 0; i < 90; i += 1) {
-    const date = dayjs(today()).subtract(i, "day").format("YYYY-MM-DD");
-    const rate = byDate.get(date);
-    if (rate == null) {
-      if (i === 0) continue;
-      break;
-    }
-    if (rate <= 0) {
-      if (i === 0) continue;
-      break;
-    }
-    streak += 1;
-  }
-  return streak;
-}
-
-function longestRun(
-  todos: Array<{ date: string; completionRate: number }>,
-  from: string,
-  to: string,
-): number {
-  // Iterate calendar day-by-day across [from, to] (inclusive). A gap in
-  // DailyTodo records breaks the streak — see lib/profile.ts for the
-  // same fix and rationale.
-  const byDate = new Map<string, number>();
-  for (const t of todos) byDate.set(t.date, t.completionRate);
-
-  let longest = 0;
-  let cur = 0;
-  let cursor = dayjs(from);
-  const end = dayjs(to);
-  while (!cursor.isAfter(end)) {
-    const rate = byDate.get(cursor.format("YYYY-MM-DD"));
-    if (rate != null && rate > 0) {
-      cur += 1;
-      longest = Math.max(longest, cur);
-    } else {
-      cur = 0;
-    }
-    cursor = cursor.add(1, "day");
-  }
-  return longest;
-}
 
 const GOAL_LABEL: Record<string, string> = {
   weight_loss: "Giảm cân",
@@ -221,7 +170,7 @@ export async function loadLeaderboard(
     const totalVolume = agg.logs.reduce((a, l) => a + l.volume, 0);
     const lifetime: LifetimeStats = {
       longestStreak: longestRun(sortedTodos, earliest, to),
-      currentStreak: streakFromToday(agg.todos),
+      currentStreak: currentStreak(agg.todos, to),
       trainingDaysCompleted: sortedTodos.filter(
         (t) => t.type === "training" && t.completionRate > 0,
       ).length,
@@ -240,7 +189,7 @@ export async function loadLeaderboard(
       trainingDays30,
       totalVolume30: Math.round(totalVolume30),
       avgCompletion30,
-      currentStreak: streakFromToday(agg.todos),
+      currentStreak: currentStreak(agg.todos, to),
       longestStreak30: longestRun(todos30, from, to),
       points: summary.points,
       level: summary.level,
