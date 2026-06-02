@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { syncAndEvaluateAchievements } from "@/lib/achievements-data";
+import { notifyWeeklyChallengeIfComplete } from "@/lib/challenges";
 import { connectMongoDB } from "@/lib/mongodb";
 import { computeCompletionRate } from "@/lib/serializers";
 import { DailyTodoModel } from "@/models/DailyTodo";
@@ -34,6 +35,7 @@ export async function toggleTodoTask(
   // effort: a gamification failure must never break the core to-do toggle.
   try {
     await syncAndEvaluateAchievements(userId);
+    await notifyWeeklyChallengeIfComplete(userId);
   } catch {
     // ignore
   }

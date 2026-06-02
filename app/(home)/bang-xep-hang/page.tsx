@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Activity,
+  Award,
   Dumbbell,
   Flame,
   Sparkles,
@@ -51,6 +52,7 @@ export async function generateMetadata({
 }
 
 const SORTS: Array<{ key: LeaderboardSort; label: string; icon: typeof Flame }> = [
+  { key: "points", label: "Điểm", icon: Award },
   { key: "streak", label: "Streak", icon: Flame },
   { key: "volume", label: "Tổng volume", icon: Dumbbell },
   { key: "completion", label: "Hoàn thành", icon: Activity },
@@ -60,11 +62,20 @@ const SORT_LABELS: Record<LeaderboardSort, string> = {
   streak: "Streak hiện tại",
   volume: "Tổng volume (30d)",
   completion: "Tỷ lệ hoàn thành (30d)",
+  points: "Điểm thành tích",
 };
 
 function parseSort(value: string | undefined): LeaderboardSort {
-  if (value === "volume" || value === "completion") return value;
-  return "streak";
+  if (
+    value === "streak" ||
+    value === "volume" ||
+    value === "completion" ||
+    value === "points"
+  ) {
+    return value;
+  }
+  // Points is the primary (first) tab, so it's the default landing sort.
+  return "points";
 }
 
 function formatVolume(volumeKg: number): string {
@@ -80,6 +91,7 @@ function formatVolume(volumeKg: number): string {
 function metric(entry: LeaderboardEntry, sort: LeaderboardSort): string {
   if (sort === "streak") return `${entry.currentStreak} ngày`;
   if (sort === "volume") return formatVolume(entry.totalVolume30);
+  if (sort === "points") return `${entry.points} điểm`;
   return `${entry.avgCompletion30}%`;
 }
 
@@ -153,7 +165,7 @@ export default async function LeaderboardPage({
           return (
             <Link
               key={s.key}
-              href={s.key === "streak" ? "/bang-xep-hang" : `/bang-xep-hang?sort=${s.key}`}
+              href={`/bang-xep-hang?sort=${s.key}`}
               className={
                 "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors " +
                 (active
@@ -225,9 +237,13 @@ export default async function LeaderboardPage({
                     {entry.goalLabel ? (
                       <Badge variant="secondary">{entry.goalLabel}</Badge>
                     ) : null}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 font-medium text-brand">
+                      <Award className="h-3 w-3" aria-hidden />
+                      Cấp {entry.level} · {entry.levelLabel}
+                    </span>
                     <span className="text-text-muted">
-                      {entry.trainingDays30} ngày tập • streak dài nhất{" "}
-                      {entry.longestStreak30} ngày
+                      {entry.badgeCount}/{entry.totalBadges} huy hiệu •{" "}
+                      {entry.trainingDays30} ngày tập
                     </span>
                   </div>
                 </div>

@@ -1,13 +1,19 @@
 import "server-only";
 
 import dayjs from "dayjs";
+import {
+  evaluateAchievements,
+  summarizeAchievements,
+  type LifetimeStats,
+} from "@/lib/achievements";
 import { connectMongoDB } from "@/lib/mongodb";
 import { today } from "@/lib/daily-todo-template";
+import { currentStreak, longestRun } from "@/lib/streaks";
 import { DailyTodoModel } from "@/models/DailyTodo";
 import { ProgressLogModel } from "@/models/ProgressLog";
 import { UserModel } from "@/models/User";
 
-export type LeaderboardSort = "streak" | "volume" | "completion";
+export type LeaderboardSort = "streak" | "volume" | "completion" | "points";
 
 export type LeaderboardEntry = {
   rank: number;
@@ -19,6 +25,12 @@ export type LeaderboardEntry = {
   avgCompletion30: number;
   currentStreak: number;
   longestStreak30: number;
+  // Gamification (lifetime).
+  points: number;
+  level: number;
+  levelLabel: string;
+  badgeCount: number;
+  totalBadges: number;
 };
 
 type AggregatedPerUser = {
@@ -26,61 +38,12 @@ type AggregatedPerUser = {
   slug: string;
   displayName: string;
   goal: string | null;
+  favCount: number;
+  /** Lifetime DailyTodo rows; 30-day metrics are derived in-memory. */
   todos: Array<{ date: string; completionRate: number; type: string }>;
-  totalVolume: number;
+  /** Lifetime ProgressLog volumes by date. */
+  logs: Array<{ date: string; volume: number }>;
 };
-
-function streakFromToday(
-  todos: Array<{ date: string; completionRate: number }>,
-): number {
-  // Same convention as `lib/profile.ts`: today gets a grace period, then
-  // every consecutive past day with completion > 0 counts.
-  let streak = 0;
-  const byDate = new Map<string, number>();
-  for (const t of todos) byDate.set(t.date, t.completionRate);
-  for (let i = 0; i < 90; i += 1) {
-    const date = dayjs(today()).subtract(i, "day").format("YYYY-MM-DD");
-    const rate = byDate.get(date);
-    if (rate == null) {
-      if (i === 0) continue;
-      break;
-    }
-    if (rate <= 0) {
-      if (i === 0) continue;
-      break;
-    }
-    streak += 1;
-  }
-  return streak;
-}
-
-function longestRun(
-  todos: Array<{ date: string; completionRate: number }>,
-  from: string,
-  to: string,
-): number {
-  // Iterate calendar day-by-day across [from, to] (inclusive). A gap in
-  // DailyTodo records breaks the streak — see lib/profile.ts for the
-  // same fix and rationale.
-  const byDate = new Map<string, number>();
-  for (const t of todos) byDate.set(t.date, t.completionRate);
-
-  let longest = 0;
-  let cur = 0;
-  let cursor = dayjs(from);
-  const end = dayjs(to);
-  while (!cursor.isAfter(end)) {
-    const rate = byDate.get(cursor.format("YYYY-MM-DD"));
-    if (rate != null && rate > 0) {
-      cur += 1;
-      longest = Math.max(longest, cur);
-    } else {
-      cur = 0;
-    }
-    cursor = cursor.add(1, "day");
-  }
-  return longest;
-}
 
 const GOAL_LABEL: Record<string, string> = {
   weight_loss: "Giảm cân",
@@ -111,6 +74,8 @@ export async function loadLeaderboard(
       displayName: 1,
       profileSlug: 1,
       goal: 1,
+      favoriteExerciseSlugs: 1,
+      favoritePlanSlugs: 1,
       _id: 0,
     })
     .lean<
@@ -119,17 +84,19 @@ export async function loadLeaderboard(
         displayName?: string | null;
         profileSlug: string;
         goal?: string | null;
+        favoriteExerciseSlugs?: string[];
+        favoritePlanSlugs?: string[];
       }>
     >();
   if (users.length === 0) return [];
 
   const clerkIds = users.map((u) => u.clerkId);
 
+  // Lifetime fetch (no date filter): the gamification metrics (points/level/
+  // badges) are all-time, and the 30-day columns are derived in-memory from
+  // the same rows, so a single pass per collection covers both windows.
   const [todos, logs] = await Promise.all([
-    DailyTodoModel.find({
-      userId: { $in: clerkIds },
-      date: { $gte: from, $lte: to },
-    })
+    DailyTodoModel.find({ userId: { $in: clerkIds } })
       .select({ userId: 1, date: 1, type: 1, completionRate: 1, _id: 0 })
       .lean<
         Array<{
@@ -139,12 +106,9 @@ export async function loadLeaderboard(
           completionRate?: number;
         }>
       >(),
-    ProgressLogModel.find({
-      userId: { $in: clerkIds },
-      date: { $gte: from, $lte: to },
-    })
-      .select({ userId: 1, totalVolume: 1, _id: 0 })
-      .lean<Array<{ userId: string; totalVolume?: number }>>(),
+    ProgressLogModel.find({ userId: { $in: clerkIds } })
+      .select({ userId: 1, date: 1, totalVolume: 1, _id: 0 })
+      .lean<Array<{ userId: string; date: string; totalVolume?: number }>>(),
   ]);
 
   // Aggregate per user.
@@ -155,8 +119,11 @@ export async function loadLeaderboard(
       slug: u.profileSlug,
       displayName: u.displayName?.trim() || "Bạn tập",
       goal: u.goal ?? null,
+      favCount:
+        (u.favoriteExerciseSlugs?.length ?? 0) +
+        (u.favoritePlanSlugs?.length ?? 0),
       todos: [],
-      totalVolume: 0,
+      logs: [],
     });
   }
   for (const t of todos) {
@@ -171,32 +138,64 @@ export async function loadLeaderboard(
   for (const l of logs) {
     const entry = perUser.get(l.userId);
     if (!entry) continue;
-    entry.totalVolume += l.totalVolume ?? 0;
+    entry.logs.push({ date: l.date, volume: l.totalVolume ?? 0 });
   }
 
   // Materialise leaderboard rows, sort, slice.
   const rows: LeaderboardEntry[] = [];
   for (const agg of perUser.values()) {
-    const trainingDays = agg.todos.filter((t) => t.type === "training").length;
-    if (trainingDays === 0) continue;
     const sortedTodos = [...agg.todos].sort((a, b) =>
       a.date.localeCompare(b.date),
     );
-    const rates = sortedTodos.map((t) => t.completionRate);
-    const avgCompletion =
-      rates.length === 0
+
+    // 30-day window (derived from the lifetime rows). The upper bound matters:
+    // `generateMonthlyTodos` seeds DailyTodo records up to ~29 days into the
+    // future, so without `<= to` those future (0%-completion) rows would
+    // inflate trainingDays30 and drag down avgCompletion30.
+    const todos30 = sortedTodos.filter((t) => t.date >= from && t.date <= to);
+    const trainingDays30 = todos30.filter((t) => t.type === "training").length;
+    if (trainingDays30 === 0) continue;
+    const rates30 = todos30.map((t) => t.completionRate);
+    const avgCompletion30 =
+      rates30.length === 0
         ? 0
-        : Math.round(rates.reduce((a, b) => a + b, 0) / rates.length);
+        : Math.round(rates30.reduce((a, b) => a + b, 0) / rates30.length);
+    const totalVolume30 = agg.logs
+      .filter((l) => l.date >= from && l.date <= to)
+      .reduce((a, l) => a + l.volume, 0);
+
+    // Lifetime gamification stats → points/level/badges (reuses the shared
+    // achievement engine so values match the /thanh-tich page).
+    const earliest = sortedTodos[0]?.date ?? to;
+    const totalVolume = agg.logs.reduce((a, l) => a + l.volume, 0);
+    const lifetime: LifetimeStats = {
+      longestStreak: longestRun(sortedTodos, earliest, to),
+      currentStreak: currentStreak(agg.todos, to),
+      trainingDaysCompleted: sortedTodos.filter(
+        (t) => t.type === "training" && t.completionRate > 0,
+      ).length,
+      perfectDays: sortedTodos.filter((t) => t.completionRate >= 100).length,
+      totalVolume,
+      favoritesCount: agg.favCount,
+      profilePublic: true,
+    };
+    const summary = summarizeAchievements(evaluateAchievements(lifetime));
+
     rows.push({
       rank: 0, // assigned after sort
       slug: agg.slug,
       displayName: agg.displayName,
       goalLabel: agg.goal ? GOAL_LABEL[agg.goal] ?? null : null,
-      trainingDays30: trainingDays,
-      totalVolume30: Math.round(agg.totalVolume),
-      avgCompletion30: avgCompletion,
-      currentStreak: streakFromToday(agg.todos),
-      longestStreak30: longestRun(sortedTodos, from, to),
+      trainingDays30,
+      totalVolume30: Math.round(totalVolume30),
+      avgCompletion30,
+      currentStreak: currentStreak(agg.todos, to),
+      longestStreak30: longestRun(todos30, from, to),
+      points: summary.points,
+      level: summary.level,
+      levelLabel: summary.levelLabel,
+      badgeCount: summary.unlockedCount,
+      totalBadges: summary.total,
     });
   }
 
@@ -211,6 +210,10 @@ export async function loadLeaderboard(
     completion: (a, b) =>
       b.avgCompletion30 - a.avgCompletion30 ||
       b.trainingDays30 - a.trainingDays30,
+    points: (a, b) =>
+      b.points - a.points ||
+      b.badgeCount - a.badgeCount ||
+      b.longestStreak30 - a.longestStreak30,
   };
   rows.sort(sortFns[sort]);
 
