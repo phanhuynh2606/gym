@@ -15,6 +15,7 @@ import {
   type Muscle,
 } from "@/types";
 import { listExercises } from "@/lib/exercises-data";
+import { filterExercises } from "@/lib/exercise-search";
 import { buildBreadcrumbJsonLd, buildMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildMetadata({
@@ -30,6 +31,7 @@ const breadcrumbs = [
 ];
 
 type SearchParams = {
+  q?: string;
   muscle?: string;
   equipment?: string;
   difficulty?: string;
@@ -42,27 +44,23 @@ export default async function ExercisesIndexPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const q = params.q?.trim() || undefined;
   const muscle = params.muscle as Muscle | undefined;
   const equipment = params.equipment as Equipment | undefined;
   const difficulty = params.difficulty as Difficulty | undefined;
   const goal = params.goal as Goal | undefined;
 
   const exercises = await listExercises();
-  const filtered = exercises.filter((e) => {
-    if (
-      muscle &&
-      !e.primaryMuscles.includes(muscle) &&
-      !e.secondaryMuscles.includes(muscle)
-    ) {
-      return false;
-    }
-    if (equipment && !e.equipment.includes(equipment)) return false;
-    if (difficulty && e.difficulty !== difficulty) return false;
-    if (goal && !e.goalTags.includes(goal)) return false;
-    return true;
+  const filtered = filterExercises(exercises, {
+    q,
+    muscle,
+    equipment,
+    difficulty,
+    goal,
   });
 
   const activeFilters: { key: string; label: string }[] = [];
+  if (q) activeFilters.push({ key: "q", label: `“${q}”` });
   if (muscle)
     activeFilters.push({ key: "muscle", label: MUSCLE_LABELS_VI[muscle] });
   if (equipment)
