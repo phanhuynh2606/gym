@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getBaseUrl } from "@/lib/constants";
+import { isMongoConfigured, connectMongoDB } from "@/lib/mongodb";
+import { UserModel } from "@/models/User";
 import { EXERCISES } from "@/server/seed/exercises";
 import { WORKOUT_PLANS } from "@/server/seed/workout-plans";
 
@@ -16,7 +18,7 @@ const MUSCLE_SLUGS = [
   "calves",
 ] as const;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getBaseUrl();
   const now = new Date();
 
@@ -46,6 +48,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${base}/bang-xep-hang`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.6,
+    },
   ];
 
   const planPages: MetadataRoute.Sitemap = WORKOUT_PLANS.map((p) => ({
@@ -69,5 +77,35 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...planPages, ...exercisePages, ...musclePages];
+  // Public profiles — only when Mongo is configured (build runs without it
+  // in CI / fresh local clones). Gracefully degrade to an empty list on DB
+  // error so the sitemap stays available.
+  let profilePages: MetadataRoute.Sitemap = [];
+  if (isMongoConfigured()) {
+    try {
+      await connectMongoDB();
+      const profiles = await UserModel.find({
+        profileVisibility: "public",
+        profileSlug: { $type: "string" },
+      })
+        .select({ profileSlug: 1, updatedAt: 1, _id: 0 })
+        .lean<Array<{ profileSlug: string; updatedAt?: Date | string }>>();
+      profilePages = profiles.map((p) => ({
+        url: `${base}/u/${p.profileSlug}`,
+        lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.5,
+      }));
+    } catch {
+      profilePages = [];
+    }
+  }
+
+  return [
+    ...staticPages,
+    ...planPages,
+    ...exercisePages,
+    ...musclePages,
+    ...profilePages,
+  ];
 }

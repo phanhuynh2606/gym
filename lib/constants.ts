@@ -15,6 +15,7 @@ export const PRIMARY_NAV = [
   { href: "/bai-tap", label: "Bài tập" },
   { href: "/nhom-co", label: "Nhóm cơ" },
   { href: "/dinh-duong", label: "Dinh dưỡng" },
+  { href: "/bang-xep-hang", label: "Bảng xếp hạng" },
 ];
 
 export const APP_NAV = [

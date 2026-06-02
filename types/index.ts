@@ -179,3 +179,13 @@ export const GOAL_LABELS_VI: Record<Goal, string> = {
   toning: "Săn chắc",
   strength: "Tăng sức mạnh",
 };
+
+export const GENDER_LABELS_VI: Record<Gender, string> = {
+  male: "Nam",
+  female: "Nữ",
+};
+
+// `level` (User onboarding) shares the same enum as `Difficulty`; expose a
+// dedicated label map so callers don't have to import DIFFICULTY_LABELS_VI
+// for what is conceptually a user attribute.
+export const LEVEL_LABELS_VI = DIFFICULTY_LABELS_VI;

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { Bell, Settings } from "lucide-react";
+import { Bell, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/seo/Breadcrumb";
 import { ReminderPreferencesForm } from "@/components/notifications/ReminderPreferencesForm";
+import { ProfileSettingsForm } from "@/components/social/ProfileSettingsForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBaseUrl } from "@/lib/constants";
 import { isEmailConfigured } from "@/lib/email";
 import { getOrCreateMongoUser } from "@/lib/users";
 
@@ -79,7 +81,27 @@ export default async function CaiDatPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Hồ sơ</CardTitle>
+          <div className="flex items-center gap-2">
+            <UserRound className="h-4 w-4 text-brand" aria-hidden />
+            <CardTitle className="text-base">Profile công khai</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ProfileSettingsForm
+            initial={{
+              displayName: user.displayName,
+              profileSlug: user.profileSlug,
+              profileBio: user.profileBio,
+              profileVisibility: user.profileVisibility,
+            }}
+            baseUrl={getBaseUrl()}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Hồ sơ tập luyện</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p className="text-text-secondary">

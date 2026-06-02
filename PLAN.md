@@ -106,6 +106,16 @@
 - `/api/cron/send-reminders` chạy mỗi giờ (vercel.json), trigger theo timezone user.
 - Resend email (optional, graceful 503 khi không có `RESEND_API_KEY`).
 
+### PR #10 — Social profiles + leaderboard + share (~1 ngày)
+
+- User model thêm `profileSlug` (unique among non-null) + `profileVisibility` + `profileBio`.
+- `/u/[slug]` public profile (opt-in) hiển thị stats 30 ngày (training days, streak hiện tại / dài nhất, completion, total volume).
+- `/bang-xep-hang` leaderboard sort theo streak / volume / completion.
+- Settings `/cai-dat` thêm Profile + Privacy section (slug picker, bio, visibility radio).
+- Share button `navigator.share()` + clipboard fallback.
+- Sitemap async, include public profiles + leaderboard.
+- Snapshot redact body metrics, sleep/water, mood, individual sessions.
+
 ---
 
 ## 3. Design System (Contentful) → Tailwind

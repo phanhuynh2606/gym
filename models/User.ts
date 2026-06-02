@@ -34,9 +34,29 @@ const UserSchema = new Schema(
     reminderHour: { type: Number, min: 0, max: 23, default: 18 },
     reminderEmailEnabled: { type: Boolean, default: false },
     timezoneOffsetMinutes: { type: Number, default: 420 },
+    // Social profile (PR #10). Public profiles are addressable at
+    // `/u/<profileSlug>`. Visibility defaults to "private" so users opt in
+    // explicitly. `profileSlug` is unique among documents that actually
+    // have one (partial filter expression on the index below).
+    profileSlug: { type: String },
+    profileVisibility: {
+      type: String,
+      enum: ["public", "private"],
+      default: "private",
+    },
+    profileBio: { type: String, maxlength: 280 },
   },
   { timestamps: true },
 );
+
+UserSchema.index(
+  { profileSlug: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { profileSlug: { $type: "string" } },
+  },
+);
+UserSchema.index({ profileVisibility: 1 });
 
 export type UserDocument = InferSchemaType<typeof UserSchema> & {
   _id: mongoose.Types.ObjectId;
