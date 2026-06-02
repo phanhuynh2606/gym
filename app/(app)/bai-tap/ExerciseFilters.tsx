@@ -1,9 +1,10 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DIFFICULTY_LABELS_VI,
   EQUIPMENT_LABELS_VI,
@@ -61,8 +62,43 @@ export function ExerciseFilters() {
 
   const hasAny = Array.from(searchParams.keys()).length > 0;
 
+  const currentQuery = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(currentQuery);
+
+  // Sync the input when the URL query changes externally (e.g. "clear all
+  // filters" or back/forward navigation) using the render-time adjustment
+  // pattern instead of an effect.
+  const [prevUrlQuery, setPrevUrlQuery] = useState(currentQuery);
+  if (currentQuery !== prevUrlQuery) {
+    setPrevUrlQuery(currentQuery);
+    setQuery(currentQuery);
+  }
+
+  // Debounce writing the text query into the URL so we don't push on
+  // every keystroke.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const trimmed = query.trim();
+      if (trimmed === currentQuery) return;
+      update("q", trimmed === "" ? null : trimmed);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [query, currentQuery, update]);
+
   return (
     <div className="rounded-md border border-border-subtle bg-surface p-4 space-y-3">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+        <Input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Tìm bài tập theo tên…"
+          aria-label="Tìm bài tập"
+          className="pl-9"
+        />
+      </div>
+
       <FilterGroup label="Nhóm cơ">
         {MUSCLES.map((m) => (
           <Chip
