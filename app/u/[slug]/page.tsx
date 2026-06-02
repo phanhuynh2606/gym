@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
+import { ProfileBadges } from "@/components/achievements/ProfileBadges";
 import { Breadcrumb } from "@/components/seo/Breadcrumb";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ShareProfileButton } from "@/components/social/ShareProfileButton";
@@ -214,6 +215,10 @@ export default async function PublicProfilePage({ params }: Props) {
             );
           })}
         </section>
+
+        {snap.gamification.badges.length > 0 ? (
+          <ProfileBadges gamification={snap.gamification} />
+        ) : null}
 
         <Card>
           <CardHeader>

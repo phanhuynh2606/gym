@@ -24,6 +24,7 @@ export const APP_NAV = [
   { href: "/lich-tap", label: "Lịch tập", icon: "calendar" },
   { href: "/tien-do", label: "Tiến độ", icon: "trending-up" },
   { href: "/tong-ket-thang", label: "Tổng kết tháng", icon: "bar-chart" },
+  { href: "/thanh-tich", label: "Thành tích", icon: "award" },
   { href: "/yeu-thich", label: "Yêu thích", icon: "heart" },
 ];
 

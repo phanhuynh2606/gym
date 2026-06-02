@@ -3,6 +3,7 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import {
   Apple,
+  Award,
   BarChart,
   BookOpen,
   Calendar,
@@ -38,6 +39,7 @@ const ICON_MAP: Record<string, typeof Home> = {
   calendar: Calendar,
   "trending-up": TrendingUp,
   "bar-chart": BarChart,
+  award: Award,
   heart: Heart,
 };
 

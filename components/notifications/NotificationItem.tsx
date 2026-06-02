@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
+  Award,
   Bell,
   CalendarCheck2,
   ListTodo,
@@ -27,6 +28,7 @@ const ICON_MAP: Record<NotificationView["type"], typeof Bell> = {
   reminder_metrics: ScrollText,
   streak_milestone: Trophy,
   monthly_review_ready: Sparkles,
+  achievement_unlocked: Award,
   system: Bell,
 };
 

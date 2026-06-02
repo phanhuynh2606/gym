@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
+import { syncAndEvaluateAchievements } from "@/lib/achievements-data";
 import { connectMongoDB } from "@/lib/mongodb";
 import { computeCompletionRate } from "@/lib/serializers";
 import { DailyTodoModel } from "@/models/DailyTodo";
@@ -29,9 +30,18 @@ export async function toggleTodoTask(
   todo.markModified("tasks");
   await todo.save();
 
+  // Unlock any achievements this completion may have earned + notify. Best
+  // effort: a gamification failure must never break the core to-do toggle.
+  try {
+    await syncAndEvaluateAchievements(userId);
+  } catch {
+    // ignore
+  }
+
   revalidatePath("/hom-nay");
   revalidatePath("/todo");
   revalidatePath("/lich-tap");
+  revalidatePath("/thanh-tich");
 
   return {
     ok: true,
