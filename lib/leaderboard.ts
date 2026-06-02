@@ -199,8 +199,11 @@ export async function loadLeaderboard(
       a.date.localeCompare(b.date),
     );
 
-    // 30-day window (derived from the lifetime rows).
-    const todos30 = sortedTodos.filter((t) => t.date >= from);
+    // 30-day window (derived from the lifetime rows). The upper bound matters:
+    // `generateMonthlyTodos` seeds DailyTodo records up to ~29 days into the
+    // future, so without `<= to` those future (0%-completion) rows would
+    // inflate trainingDays30 and drag down avgCompletion30.
+    const todos30 = sortedTodos.filter((t) => t.date >= from && t.date <= to);
     const trainingDays30 = todos30.filter((t) => t.type === "training").length;
     if (trainingDays30 === 0) continue;
     const rates30 = todos30.map((t) => t.completionRate);
@@ -209,7 +212,7 @@ export async function loadLeaderboard(
         ? 0
         : Math.round(rates30.reduce((a, b) => a + b, 0) / rates30.length);
     const totalVolume30 = agg.logs
-      .filter((l) => l.date >= from)
+      .filter((l) => l.date >= from && l.date <= to)
       .reduce((a, l) => a + l.volume, 0);
 
     // Lifetime gamification stats → points/level/badges (reuses the shared
