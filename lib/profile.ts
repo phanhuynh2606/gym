@@ -1,6 +1,12 @@
 import "server-only";
 
 import dayjs from "dayjs";
+import {
+  evaluateAchievements,
+  summarizeAchievements,
+  type AchievementTier,
+} from "@/lib/achievements";
+import { computeLifetimeStats } from "@/lib/achievements-data";
 import { connectMongoDB } from "@/lib/mongodb";
 import { today } from "@/lib/daily-todo-template";
 import { DailyTodoModel } from "@/models/DailyTodo";
@@ -30,6 +36,19 @@ export type ProfileSnapshot = {
     totalVolume30: number;
     currentStreak: number;
     longestStreak30: number;
+  };
+  gamification: {
+    level: number;
+    levelLabel: string;
+    points: number;
+    unlockedCount: number;
+    totalBadges: number;
+    badges: Array<{
+      id: string;
+      name: string;
+      icon: string;
+      tier: AchievementTier;
+    }>;
   };
 };
 
@@ -64,6 +83,7 @@ export const RESERVED_SLUGS = new Set([
   "sign-up",
   "sitemap.xml",
   "robots.txt",
+  "thanh-tich",
   "thong-bao",
   "tien-do",
   "todo",
@@ -211,6 +231,22 @@ export async function buildProfileSnapshot(
       ? WORKOUT_PLANS.find((p) => p.slug === user.activePlanSlug) ?? null
       : null;
 
+  // Lifetime-based gamification flair (PR #11). Read-only here: unlocks are
+  // persisted/notified via `syncAndEvaluateAchievements`, not on profile view.
+  const lifetimeStats = await computeLifetimeStats(clerkId);
+  const statuses = evaluateAchievements(lifetimeStats);
+  const summary = summarizeAchievements(statuses);
+  const tierRank: Record<AchievementTier, number> = {
+    platinum: 0,
+    gold: 1,
+    silver: 2,
+    bronze: 3,
+  };
+  const badges = statuses
+    .filter((s) => s.unlocked)
+    .sort((a, b) => tierRank[a.tier] - tierRank[b.tier])
+    .map((s) => ({ id: s.id, name: s.name, icon: s.icon, tier: s.tier }));
+
   return {
     slug: user.profileSlug,
     displayName: user.displayName?.trim() || "Bạn tập",
@@ -239,6 +275,14 @@ export async function buildProfileSnapshot(
       totalVolume30: Math.round(totalVolume),
       currentStreak: currentStreak(todos),
       longestStreak30: longestRun(todos, from, to),
+    },
+    gamification: {
+      level: summary.level,
+      levelLabel: summary.levelLabel,
+      points: summary.points,
+      unlockedCount: summary.unlockedCount,
+      totalBadges: summary.total,
+      badges,
     },
   };
 }

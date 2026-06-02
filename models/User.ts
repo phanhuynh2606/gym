@@ -45,6 +45,18 @@ const UserSchema = new Schema(
       default: "private",
     },
     profileBio: { type: String, maxlength: 280 },
+    // Gamification (PR #11). Stores the ids of achievements the user has
+    // unlocked, plus when, so notifications fire exactly once per badge and
+    // profiles can show an "earned at" date.
+    unlockedAchievements: [
+      new Schema(
+        {
+          id: { type: String, required: true },
+          unlockedAt: { type: Date, default: Date.now },
+        },
+        { _id: false },
+      ),
+    ],
   },
   { timestamps: true },
 );

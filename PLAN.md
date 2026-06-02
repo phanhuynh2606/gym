@@ -116,6 +116,16 @@
 - Sitemap async, include public profiles + leaderboard.
 - Snapshot redact body metrics, sleep/water, mood, individual sessions.
 
+### PR #11 — Gamification: streaks + badges/achievements (~1 ngày)
+
+- `lib/achievements.ts` thuần (defs + `evaluateAchievements` + `summarizeAchievements`) — 15 huy hiệu, 5 nhóm (streak / consistency / perfect / volume / community), 4 tier (đồng/bạc/vàng/bạch kim) + hệ thống điểm & cấp.
+- `lib/achievements-data.ts` (server-only): `computeLifetimeStats` (toàn bộ lịch sử) + `syncAndEvaluateAchievements` — lưu badge mới mở khoá vào `User.unlockedAchievements`, bắn notification (dedupeKey `achievement:<id>`).
+- `/thanh-tich`: header cấp/điểm/tiến độ + lưới huy hiệu theo nhóm, có thanh tiến độ cho badge chưa đạt.
+- Streak badge dùng `longestStreak` (đã mở khoá thì không mất khi reset chuỗi).
+- Thêm `achievement_unlocked` vào Notification, mở khoá real-time khi tick to-do (`toggleTodoTask`).
+- Surface huy hiệu + cấp trên profile công khai `/u/[slug]`.
+- Nav `Thành tích` (APP_NAV) + reserved slug `thanh-tich`. Page noindex (không vào sitemap).
+
 ---
 
 ## 3. Design System (Contentful) → Tailwind

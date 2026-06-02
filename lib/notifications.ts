@@ -12,6 +12,7 @@ export type NotificationType =
   | "reminder_metrics"
   | "streak_milestone"
   | "monthly_review_ready"
+  | "achievement_unlocked"
   | "system";
 
 export type NotificationView = {
