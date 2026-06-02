@@ -146,31 +146,25 @@ export async function syncAndEvaluateAchievements(
   const summary = summarizeAchievements(statuses);
   const unlockedIds = statuses.filter((s) => s.unlocked).map((s) => s.id);
 
-  const user = await UserModel.findOne({ clerkId })
-    .select({ unlockedAchievements: 1, _id: 0 })
-    .lean<{
-      unlockedAchievements?: Array<{ id: string; unlockedAt?: Date }>;
-    } | null>();
-  const stored = new Set(
-    (user?.unlockedAchievements ?? []).map((a) => a.id),
-  );
-  const newlyUnlocked = unlockedIds.filter((id) => !stored.has(id));
+  // Persist each unlock with an atomic, guarded $push: the `$ne` filter makes
+  // the insert a no-op if the id is already present, so concurrent callers
+  // (e.g. a to-do toggle racing a `/thanh-tich` render) can't create duplicate
+  // sub-documents. `modifiedCount` tells us which ids were genuinely new this
+  // call, so we only notify for those.
+  const now = new Date();
+  const newlyUnlocked: string[] = [];
+  for (const id of unlockedIds) {
+    const res = await UserModel.updateOne(
+      { clerkId, "unlockedAchievements.id": { $ne: id } },
+      { $push: { unlockedAchievements: { id, unlockedAt: now } } },
+    );
+    if (res.modifiedCount > 0) newlyUnlocked.push(id);
+  }
 
   if (newlyUnlocked.length > 0) {
-    const now = new Date();
-    await UserModel.updateOne(
-      { clerkId },
-      {
-        $push: {
-          unlockedAchievements: {
-            $each: newlyUnlocked.map((id) => ({ id, unlockedAt: now })),
-          },
-        },
-      },
-    );
-
     // Best-effort notifications — never let a delivery failure break the
-    // primary flow (page render / to-do toggle).
+    // primary flow (page render / to-do toggle). `dedupeKey` is a second
+    // guard against duplicates.
     await Promise.allSettled(
       newlyUnlocked.map((id) => {
         const a = ACHIEVEMENT_BY_ID.get(id);
